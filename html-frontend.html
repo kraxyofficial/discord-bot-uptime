@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot Uptime Hizmeti</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2c2f33;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #23272a;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #7289da;
+            text-align: center;
+        }
+        .card {
+            background-color: #2c2f33;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #7289da;
+            background-color: #40444b;
+            color: #ffffff;
+            box-sizing: border-box;
+        }
+        .btn {
+            background-color: #7289da;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #5e77d4;
+        }
+        .btn-danger {
+            background-color: #ed4245;
+        }
+        .btn-danger:hover {
+            background-color: #c93b3e;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .online {
+            background-color: #57F287;
+            color: #23272a;
+        }
+        .offline {
+            background-color: #ed4245;
+            color: white;
+        }
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+            background-color: #40444b;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #2c2f33;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background-color: #40444b;
+            cursor: pointer;
+            border-right: 1px solid #2c2f33;
+        }
+        .tab:first-child {
+            border-top-left-radius: 4px;
+            border-bottom-left-radius: 4px;
+        }
+        .tab:last-child {
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+            border-right: none;
+        }
+        .tab.active {
+            background-color: #7289da;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .log-container {
+            background-color: #40444b;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #2c2f33;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Discord Bot Uptime Hizmeti</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="openTab('bot-config')">Bot Yapılandırması</div>
+            <div class="tab" onclick="openTab('files')">Dosyalar</div>
+            <div class="tab" onclick="openTab('logs')">Günlükler</div>
+        </div>
+        
+        <div id="bot-config" class="tab-content active">
+            <div class="card">
+                <h2>Bot Bilgileri</h2>
+                <div class="form-group">
+                    <label for="client-id">Client ID:</label>
+                    <input type="text" id="client-id" placeholder="Discord bot client ID'nizi girin">
+                </div>
+                <div class="form-group">
+                    <label for="token">Token:</label>
+                    <input type="password" id="token" placeholder="Discord bot token'ınızı girin">
+                </div>
+                <div class="form-group">
+                    <button class="btn" onclick="saveConfig()">Kaydet</button>
+                </div>
+                <div id="config-status"></div>
+            </div>
+            
+            <div class="card">
+                <h2>Bot Durumu</h2>
+                <div id="status" class="status offline">Çevrimdışı</div>
+                <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                    <button class="btn" id="start-btn" onclick="startBot()">Başlat</button>
+                    <button class="btn btn-danger" id="stop-btn" onclick="stopBot()" disabled>Durdur</button>
+                </div>
+                <div id="uptime-info" style="text-align: center; margin-top: 10px; display: none;">
+                    <p>Çalışma süresi: <span id="uptime-counter">0s</span></p>
+                    <p>Bot kullanıcı adı: <span id="bot-username">N/A</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="files" class="tab-content">
+            <div class="card">
+                <h2>Dosya Yönetimi</h2>
+                <div class="form-group">
+                    <label for="file-upload">Dosya Yükle:</label>
+                    <input type="file" id="file-upload" multiple>
+                </div>
+                <div class="form-group">
+                    <button class="btn" onclick="uploadFiles()">Yükle</button>
+                </div>
+                
+                <h3>Yüklenen Dosyalar</h3>
+                <div class="file-list" id="file-list">
+                    <p>Henüz dosya yüklenmedi.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="logs" class="tab-content">
+            <div class="card">
+                <h2>Bot Günlükleri</h2>
+                <div class="log-container" id="log-container">
+                    <div class="log-entry">[Sistem] Günlük başlatıldı.</div>
+                </div>
+                <div style="text-align: right; margin-top: 10px;">
+                    <button class="btn" onclick="clearLogs()">Günlükleri Temizle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Değişkenler
+        let botRunning = false;
+        let botConfig = {
+            clientId: '',
+            token: ''
+        };
+        let statusCheckInterval;
+        let uploadedFiles = [];
+        
+        // Tab fonksiyonu
+        function openTab(tabName) {
+            const tabs = document.getElementsByClassName('tab');
+            const tabContents = document.getElementsByClassName('tab-content');
+            
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`.tab[onclick="openTab('${tabName}')"]`).classList.add('active');
+        }
+        
+        // Config kaydetme
+        function saveConfig() {
+            const clientId = document.getElementById('client-id').value.trim();
+            const token = document.getElementById('token').value.trim();
+            
+            if (!clientId || !token) {
+                showConfigStatus('Lütfen hem Client ID hem de Token bilgilerini girin!', false);
+                return;
+            }
+            
+            botConfig.clientId = clientId;
+            botConfig.token = token;
+            
+            showConfigStatus('Bot bilgileri başarıyla kaydedildi!', true);
+            addLogEntry(`[Sistem] Bot yapılandırması güncellendi.`);
+        }
+        
+        function showConfigStatus(message, success) {
+            const statusElem = document.getElementById('config-status');
+            statusElem.textContent = message;
+            statusElem.className = 'status';
+            statusElem.classList.add(success ? 'online' : 'offline');
+            
+            setTimeout(() => {
+                statusElem.textContent = '';
+                statusElem.className = '';
+            }, 3000);
+        }
+        
+        // Bot başlatma - API'ye istek gönder
+        async function startBot() {
+            if (!botConfig.clientId || !botConfig.token) {
+                showConfigStatus('Önce bot bilgilerini kaydetmelisiniz!', false);
+                return;
+            }
+            
+            if (botRunning) return;
+            
+            try {
+                // Bot durumunu güncelle (arayüz)
+                document.getElementById('status').textContent = 'Bağlanıyor...';
+                document.getElementById('status').classList.remove('offline');
+                document.getElementById('status').classList.remove('online');
+                document.getElementById('status').style.backgroundColor = '#FFA500';
+                
+                // API'ye bot başlatma isteği gönder
+                addLogEntry(`[Sistem] Bot başlatma isteği gönderiliyor...`);
+                
+                const response = await fetch('/api/start-bot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        clientId: botConfig.clientId,
+                        token: botConfig.token
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    botRunning = true;
+                    
+                    // Bot durumunu güncelle
+                    document.getElementById('status').textContent = 'Çevrimiçi';
+                    document.getElementById('status').classList.remove('offline');
+                    document.getElementById('status').classList.add('online');
+                    document.getElementById('status').style.backgroundColor = '';
+                    
+                    document.getElementById('start-btn').disabled = true;
+                    document.getElementById('stop-btn').disabled = false;
+                    document.getElementById('uptime-info').style.display = 'block';
+                    document.getElementById('bot-username').textContent = data.botName || 'Bilinmiyor';
+                    
+                    addLogEntry(`[Bot] ${data.message} Bot adı: ${data.botName || 'Bilinmiyor'}`);
+                    
+                    // Düzenli durum kontrolü başlat
+                    statusCheckInterval = setInterval(checkBotStatus, 5000);
+                } else {
+                    // Hata durumu
+                    document.getElementById('status').textContent = 'Hata';
+                    document.getElementById('status').classList.remove('online');
+                    document.getElementById('status').classList.add('offline');
+                    document.getElementById('status').style.backgroundColor = '';
+                    
+                    addLogEntry(`[Hata] Bot başlatılamadı: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Bot başlatma hatası:', error);
+                document.getElementById('status').textContent = 'Hata';
+                document.getElementById('status').classList.remove('online');
+                document.getElementById('status').classList.add('offline');
+                document.getElementById('status').style.backgroundColor = '';
+                
+                addLogEntry(`[Hata] API hatası: ${error.message}`);
+            }
+        }
+        
+        // Bot durumunu kontrol et
+        async function checkBotStatus() {
+            if (!botRunning || !botConfig.clientId) return;
+            
+            try {
+                const response = await fetch(`/api/bot-status/${botConfig.clientId}`);
+                const data = await response.json();
+                
+                if (data.running) {
+                    // Uptime güncelle
+                    document.getElementById('uptime-counter').textContent = data.uptime;
+                    document.getElementById('bot-username').textContent = data.username || 'Bilinmiyor';
+                } else {
+                    // Bot kapanmış, durumu güncelle
+                    botRunning = false;
+                    clearInterval(statusCheckInterval);
+                    
+                    document.getElementById('status').textContent = 'Çevrimdışı';
+                    document.getElementById('status').classList.remove('online');
+                    document.getElementById('status').classList.add('offline');
+                    
+                    document.getElementById('start-btn').disabled = false;
+                    document.getElementById('stop-btn').disabled = true;
+                    document.getElementById('uptime-info').style.display = 'none';
+                    
+                    addLogEntry(`[Sistem] Bot bağlantısı kesildi.`);
+                }
+            } catch (error) {
+                console.error('Bot durum kontrolü hatası:', error);
+                addLogEntry(`[Hata] Durum kontrolü hatası: ${error.message}`);
+            }
+        }
+        
+        // Bot durdurma
+        async function stopBot() {
+            if (!botRunning) return;
+            
+            try {
+                // Bot durumunu güncelle (arayüz)
+                document.getElementById('status').textContent = 'Durduruluyor...';
+                document.getElementById('status').style.backgroundColor = '#FFA500';
+                
+                // API'ye bot durdurma isteği gönder
+                addLogEntry(`[Sistem] Bot durdurma isteği gönderiliyor...`);
+                
+                const response = await fetch('/api/stop-bot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        clientId: botConfig.clientId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    botRunning = false;
+                    clearInterval(statusCheckInterval);
+                    
+                    // Bot durumunu güncelle
+                    document.getElementById('status').textContent = 'Çevrimdışı';
+                    document.getElementById('status').classList.remove('online');
+                    document.getElementById('status').classList.add('offline');
+                    document.getElementById('status').style.backgroundColor = '';
+                    
+                    document.getElementById('start-btn').disabled = false;
+                    document.getElementById('stop-btn').disabled = true;
+                    document.getElementById('uptime-info').style.display = 'none';
+                    
+                    addLogEntry(`[Bot] ${data.message} Toplam çalışma süresi: ${data.uptime}`);
+                } else {
+                    // Hata durumu
+                    document.getElementById('status').textContent = botRunning ? 'Çevrimiçi' : 'Çevrimdışı';
+                    document.getElementById('status').style.backgroundColor = '';
+                    document.getElementById('status').classList.add(botRunning ? 'online' : 'offline');
+                    
+                    addLogEntry(`[Hata] Bot durdurulamadı: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Bot durdurma hatası:', error);
+                document.getElementById('status').textContent = botRunning ? 'Çevrimiçi' : 'Çevrimdışı';
+                document.getElementById('status').style.backgroundColor = '';
+                document.getElementById('status').classList.add(botRunning ? 'online' : 'offline');
+                
+                addLogEntry(`[Hata] API hatası: ${error.message}`);
+            }
+        }
+        
+        // Dosya yükleme - gerçek API entegrasyonu yapılmalı
+        function uploadFiles() {
+            const fileInput = document.getElementById('file-upload');
+            if (fileInput.files.length === 0) {
+                addLogEntry(`[Sistem] Yüklenecek dosya seçilmedi.`);
+                return;
+            }
+            
+            // Bu kısım aslında bir form veya FormData ile API'ye gönderilmeli
+            // Şimdilik sadece local olarak tutuyoruz
+            const newFiles = Array.from(fileInput.files);
+            uploadedFiles = [...uploadedFiles, ...newFiles];
+            
+            addLogEntry(`[Sistem] ${newFiles.length} dosya yüklendi.`);
+            updateFileList();
+            fileInput.value = '';
+        }
+        
+        function updateFileList() {
+            const fileListElem = document.getElementById('file-list');
+            
+            if (uploadedFiles.length === 0) {
+                fileListElem.innerHTML = '<p>Henüz dosya yüklenmedi.</p>';
+                return;
+            }
+            
+            fileListElem.innerHTML = '';
+            uploadedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileName = document.createElement('span');
+                fileName.textContent = `${file.name} (${formatFileSize(file.size)})`;
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-danger';
+                deleteBtn.textContent = 'Sil';
+                deleteBtn.onclick = () => removeFile(index);
+                
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(deleteBtn);
+                fileListElem.appendChild(fileItem);
+            });
+        }
+        
+        function removeFile(index) {
+            const fileName = uploadedFiles[index].name;
+            uploadedFiles.splice(index, 1);
+            updateFileList();
+            addLogEntry(`[Sistem] '${fileName}' dosyası silindi.`);
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+        
+        // Günlük işlemleri
+        function addLogEntry(message) {
+            const logContainer = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function clearLogs() {
+            const logContainer = document.getElementById('log-container');
+            logContainer.innerHTML = '<div class="log-entry">[Sistem] Günlükler temizlendi.</div>';
+        }
+        
+        // Sayfa yüklendiğinde
+        window.onload = function() {
+            addLogEntry(`[Sistem] Uptime hizmeti hazır.`);
+        };
+    </script>
+</body>
+</html>
